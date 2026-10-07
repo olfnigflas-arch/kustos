@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SportKustod - Inventar</title>
+
+  <!-- PWA & Android / Pixel Pro Vollbild-Optimierung -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#020617">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#ecfdf5', 500: '#10b981', 600: '#059669', 700: '#047857' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .touch-btn { 
+      touch-action: manipulation; 
+      user-select: none; 
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s ease-in-out;
+    }
+    .touch-btn:active {
+      transform: scale(0.97);
+    }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased select-none pb-16">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 shadow-md">
+    <div class="max-w-4xl mx-auto space-y-2.5">
+      
+      <!-- Zeile 1: Titel & Lokaler Speicher-Status -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <i class="fa-solid fa-volleyball text-base"></i>
+          </div>
+          <div>
+            <h1 class="text-base font-bold tracking-tight text-white leading-tight">SportKustod</h1>
+            <p class="text-[10px] text-slate-400">Schulsport- & Halleninventar</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <div id="saveBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/80">
+            <i class="fa-solid fa-mobile-screen-button text-emerald-400"></i>
+            <span id="saveBadgeText">Lokal gesichert</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zeile 2: Die 3 Haupt-Buttons in voller Breite (Grid 3-spaltig) -->
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="window.openRoomModal()" class="touch-btn flex items-center justify-center gap-1.5 py-2.5 px-2 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs sm:text-sm font-medium shadow-sm">
+          <i class="fa-solid fa-door-open text-blue-400"></i>
+          <span>Räume</span>
+        </button>
+
+        <button onclick="window.openExportModal()" class="touch-btn flex items-center justify-center gap-1.5 py-2.5 px-2 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs sm:text-sm font-medium shadow-sm">
+          <i class="fa-solid fa-file-export text-amber-400"></i>
+          <span>Export & Backup</span>
+        </button>
+
+        <button onclick="window.openItemModal()" class="touch-btn flex items-center justify-center gap-1.5 py-2.5 px-2 bg-emerald-600 active:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md">
+          <i class="fa-solid fa-plus"></i>
+          <span>+ Gerät</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-4 pt-3 space-y-3">
+
+    <!-- Raum-Tabs (Horizontal scrollbar) -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1.5 no-scrollbar" id="roomTabsContainer">
+      <!-- Wird dynamisch befüllt -->
+    </div>
+
+    <!-- Schnelleingabe & Sofortsuche -->
+    <div class="space-y-2">
+      <!-- Schnelleingabe-Zeile -->
+      <form onsubmit="window.quickAddItem(event)" class="flex gap-2">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-bolt absolute left-3.5 top-3 text-amber-400 text-sm"></i>
+          <input type="text" id="quickNameInput" placeholder="Gerät schnell eintippen (z.B. Basketbälle)..." 
+                 class="w-full bg-slate-900 border border-slate-800 focus:border-emerald-500 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition-all">
+        </div>
+        <button type="submit" class="touch-btn px-4 py-2.5 bg-slate-800 active:bg-slate-700 border border-slate-700 text-emerald-400 font-semibold rounded-xl text-sm flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-plus text-xs"></i>
+          <span>Anlegen</span>
+        </button>
+      </form>
+
+      <!-- Suchleiste & Schnellaktionen -->
+      <div class="flex items-center gap-2">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+          <input type="text" id="searchInput" oninput="window.handleSearch(this.value)" placeholder="In Liste suchen (Name oder Fach)..." 
+                 class="w-full bg-slate-900/60 border border-slate-800/80 focus:border-slate-600 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-all">
+        </div>
+        <button onclick="window.confirmResetAllCounts()" class="touch-btn text-xs px-2.5 py-1.5 bg-slate-900 border border-slate-800 active:bg-slate-800 text-slate-400 hover:text-rose-400 rounded-lg flex items-center gap-1 transition-all">
+          <i class="fa-solid fa-rotate-left"></i>
+          <span>Zählung auf 0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Statistik-Übersicht -->
+    <div class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-3 grid grid-cols-3 text-center text-xs divide-x divide-slate-800 shadow-sm">
+      <div class="px-2">
+        <div class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Positionen</div>
+        <div id="statItemCount" class="text-lg font-bold text-white mt-0.5">0</div>
+      </div>
+      <div class="px-2">
+        <div class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Gezählt (Ist)</div>
+        <div id="statCountTotal" class="text-lg font-bold text-emerald-400 mt-0.5">0</div>
+      </div>
+      <div class="px-2">
+        <div class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Erwartet (Soll)</div>
+        <div id="statTargetTotal" class="text-lg font-bold text-slate-300 mt-0.5">0</div>
+      </div>
+    </div>
+
+    <!-- Geräte-Liste -->
+    <div id="itemsContainer" class="space-y-2.5 pt-1">
+      <!-- Dynamischer Inhalt -->
+    </div>
+
+  </main>
+
+  <!-- ==================== MODAL: RÄUME VERWALTEN ==================== -->
+  <div id="roomModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 space-y-4 max-h-[85vh] flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <h2 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-door-open text-blue-400"></i>
+          <span>Räume & Sporthallen</span>
+        </h2>
+        <button onclick="window.closeRoomModal()" class="touch-btn text-slate-400 hover:text-white p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Raum anlegen / umbenennen Formular -->
+      <form id="roomForm" onsubmit="window.saveRoom(event)" class="space-y-1.5">
+        <input type="hidden" id="editRoomId" value="">
+        <div class="flex gap-2">
+          <input type="text" id="newRoomInput" placeholder="Raumname (z.B. Ballkammer Süd, Halle 1)..." required
+                 class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+          <button id="saveRoomBtn" type="submit" class="touch-btn px-4 py-2 bg-blue-600 active:bg-blue-700 text-white font-semibold rounded-xl text-sm flex items-center gap-1.5 whitespace-nowrap">
+            <i class="fa-solid fa-plus text-xs" id="saveRoomIcon"></i>
+            <span id="saveRoomText">Hinzufügen</span>
+          </button>
+        </div>
+        <div id="cancelEditRoomRow" class="hidden flex justify-end">
+          <button type="button" onclick="window.cancelEditRoom()" class="touch-btn text-xs text-slate-400 hover:text-slate-200 py-1 px-2">
+            Bearbeiten abbrechen
+          </button>
+        </div>
+      </form>
+
+      <!-- Liste der bestehenden Räume -->
+      <div class="flex-1 overflow-y-auto space-y-2 pr-1" id="roomManageList">
+        <!-- Dynamisch -->
+      </div>
+
+      <div class="pt-2">
+        <button onclick="window.closeRoomModal()" class="touch-btn w-full py-2.5 bg-slate-800 active:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm">
+          Fertig
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: GERÄT ERFASSEN / BEARBEITEN ==================== -->
+  <div id="itemModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <h2 id="itemModalTitle" class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-emerald-400"></i>
+          <span>Gerät erfassen</span>
+        </h2>
+        <button onclick="window.closeItemModal()" class="touch-btn text-slate-400 hover:text-white p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="itemForm" onsubmit="window.saveItem(event)" class="space-y-3.5">
+        <input type="hidden" id="editItemId">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Bezeichnung *</label>
+          <input type="text" id="itemName" required placeholder="z.B. Volleybälle Mikasa V200W" 
+                 class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Raum / Halle *</label>
+            <select id="itemRoom" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+              <!-- Dynamisch befüllt -->
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Lagerplatz / Fach</label>
+            <input type="text" id="itemLocation" placeholder="z.B. Kiste 3, Regal B" 
+                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Soll-Menge (Erwartet)</label>
+            <input type="number" id="itemTarget" min="0" value="0" 
+                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Ist-Bestand (Gezählt)</label>
+            <input type="number" id="itemCount" min="0" value="0" 
+                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Zustand</label>
+            <select id="itemCondition" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+              <option value="In Ordnung">In Ordnung</option>
+              <option value="Leichte Mängel">Leichte Mängel</option>
+              <option value="Reparaturbedürftig">Reparaturbedürftig</option>
+              <option value="Ausscheiden">Ausscheiden</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Notiz / Mängel</label>
+            <input type="text" id="itemNotes" placeholder="z.B. Ventil prüfen" 
+                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="window.closeItemModal()" class="touch-btn flex-1 py-2.5 bg-slate-800 active:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm">
+            Abbrechen
+          </button>
+          <button type="submit" class="touch-btn flex-1 py-2.5 bg-emerald-600 active:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow-md">
+            Speichern
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: EXPORT & BACKUP ==================== -->
+  <div id="exportModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <h2 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-file-export text-amber-400"></i>
+          <span>Export & Sicherung</span>
+        </h2>
+        <button onclick="window.closeExportModal()" class="touch-btn text-slate-400 hover:text-white p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Bereich für CSV-Export</label>
+          <select id="exportRoomSelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+            <option value="all">Gesamtes Inventar (Alle Räume)</option>
+          </select>
+        </div>
+
+        <button onclick="window.exportCSV()" class="touch-btn w-full py-3 bg-emerald-600 active:bg-emerald-700 text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md">
+          <i class="fa-solid fa-file-csv text-lg"></i>
+          <span>Als Excel-CSV herunterladen</span>
+        </button>
+      </div>
+
+      <hr class="border-slate-800">
+
+      <!-- Backup / Restore -->
+      <div class="space-y-2">
+        <div class="text-xs font-semibold text-slate-400">Gerätewechsel & Datensicherung</div>
+        <p class="text-[11px] text-slate-500 leading-normal">
+          Lade ein Backup herunter, um deinen aktuellen Stand in OneDrive oder Google Drive zu speichern und auf dem iPad einzuspielen.
+        </p>
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button onclick="window.downloadBackup()" class="touch-btn py-2.5 px-2 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-download text-blue-400"></i>
+            <span>Backup (.json)</span>
+          </button>
+
+          <label class="touch-btn py-2.5 px-2 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-upload text-purple-400"></i>
+            <span>Wiederherstellen</span>
+            <input type="file" accept=".json" onchange="window.restoreBackup(event)" class="hidden">
+          </label>
+        </div>
+      </div>
+
+      <div class="pt-1">
+        <button onclick="window.closeExportModal()" class="touch-btn w-full py-2 bg-slate-800 active:bg-slate-700 text-slate-400 rounded-xl text-xs font-medium">
+          Schließen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EIGENES BESTÄTIGUNGS-MODAL ==================== -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center gap-3">
+        <div id="confirmIconWrapper" class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 flex-shrink-0">
+          <i id="confirmIcon" class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <h3 id="confirmTitle" class="text-sm font-bold text-white">Bestätigung erforderlich</h3>
+          <p id="confirmMessage" class="text-xs text-slate-400 mt-0.5">Sind Sie sicher?</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="window.closeConfirmModal(false)" class="touch-btn px-3 py-2 bg-slate-800 text-slate-300 font-medium rounded-xl text-xs hover:bg-slate-700">
+          Abbrechen
+        </button>
+        <button id="confirmAcceptBtn" onclick="window.closeConfirmModal(true)" class="touch-btn px-4 py-2 bg-rose-600 text-white font-semibold rounded-xl text-xs hover:bg-rose-500 shadow-md">
+          Fortfahren
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Benachrichtigung -->
+  <div id="toastNotification" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden transition-all duration-300 pointer-events-none">
+    <div id="toastInner" class="flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium bg-slate-800 border border-slate-700 text-white">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-emerald-400"></i>
+      <span id="toastMsg">Hinweis</span>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+    const DB_KEY = 'sportkustod_inventory_data_v2';
+
+    // Globaler Anwendungsstatus
+    let state = {
+      rooms: [],      // [{ id, name }]
+      items: [],      // [{ id, name, roomId, location, target, count, condition, notes }]
+      activeRoom: 'all',
+      search: ''
+    };
+
+    let confirmResolver = null;
+
+    // Lokale Speicherung im Flash-Speicher des Pixel Pro / iPad
+    function saveState() {
+      try {
+        localStorage.setItem(DB_KEY, JSON.stringify({ rooms: state.rooms, items: state.items }));
+        const badgeText = document.getElementById('saveBadgeText');
+        if (badgeText) {
+          badgeText.innerText = 'Lokal gesichert';
+        }
+      } catch (e) {
+        console.error('Speicherfehler:', e);
+      }
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(DB_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          state.rooms = Array.isArray(parsed.rooms) ? parsed.rooms : [];
+          state.items = Array.isArray(parsed.items) ? parsed.items : [];
+        }
+      } catch (e) {
+        console.error('Ladefehler:', e);
+      }
+    }
+
+    // Audio-Feedback
+    function playClick() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(680, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(840, ctx.currentTime + 0.035);
+        gain.setValueAtTime(0.03, ctx.currentTime);
+        gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.035);
+      } catch (e) {}
+    }
+
+    // Toast Benachrichtigung
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toastNotification');
+      const inner = document.getElementById('toastInner');
+      const icon = document.getElementById('toastIcon');
+      const msg = document.getElementById('toastMsg');
+
+      msg.innerText = message;
+      if (type === 'success') {
+        inner.className = 'flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium bg-emerald-950/90 border border-emerald-800 text-emerald-200';
+        icon.className = 'fa-solid fa-circle-check text-emerald-400';
+      } else if (type === 'error') {
+        inner.className = 'flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium bg-rose-950/90 border border-rose-800 text-rose-200';
+        icon.className = 'fa-solid fa-triangle-exclamation text-rose-400';
+      } else {
+        inner.className = 'flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium bg-slate-900/90 border border-slate-700 text-slate-200';
+        icon.className = 'fa-solid fa-circle-info text-blue-400';
+      }
+
+      toast.classList.remove('hidden');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2600);
+    }
+
+    // Modal Confirmation Dialog
+    function requestConfirmation({ title, message, confirmBtnText = 'Bestätigen', isDanger = true }) {
+      return new Promise((resolve) => {
+        confirmResolver = resolve;
+        document.getElementById('confirmTitle').innerText = title;
+        document.getElementById('confirmMessage').innerText = message;
+        
+        const acceptBtn = document.getElementById('confirmAcceptBtn');
+        acceptBtn.innerText = confirmBtnText;
+        acceptBtn.className = isDanger 
+          ? 'touch-btn px-4 py-2 bg-rose-600 text-white font-semibold rounded-xl text-xs hover:bg-rose-500 shadow-md'
+          : 'touch-btn px-4 py-2 bg-emerald-600 text-white font-semibold rounded-xl text-xs hover:bg-emerald-500 shadow-md';
+
+        const modal = document.getElementById('confirmModal');
+        modal.classList.remove('hidden');
+      });
+    }
+
+    window.closeConfirmModal = function(accepted) {
+      document.getElementById('confirmModal').classList.add('hidden');
+      if (confirmResolver) {
+        confirmResolver(accepted);
+        confirmResolver = null;
+      }
+    };
+
+    // ==================== RENDERING ====================
+
+    function renderRooms() {
+      const container = document.getElementById('roomTabsContainer');
+      const exportSelect = document.getElementById('exportRoomSelect');
+      const manageList = document.getElementById('roomManageList');
+      const itemRoomSelect = document.getElementById('itemRoom');
+
+      // 1. Raum-Tabs
+      let html = `
+        <button onclick="window.selectRoom('all')" class="touch-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${state.activeRoom === 'all' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-900 border border-slate-800 text-slate-400 active:bg-slate-800'}">
+          Alle Räume (${state.items.length})
+        </button>
+      `;
+
+      state.rooms.forEach(room => {
+        const count = state.items.filter(i => i.roomId === room.id).length;
+        const isActive = state.activeRoom === room.id;
+        html += `
+          <button onclick="window.selectRoom('${room.id}')" class="touch-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${isActive ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-900 border border-slate-800 text-slate-400 active:bg-slate-800'}">
+            ${room.name} (${count})
+          </button>
+        `;
+      });
+
+      html += `
+        <button onclick="window.openRoomModal()" class="touch-btn px-2.5 py-1.5 bg-slate-900 border border-dashed border-slate-700 text-slate-400 hover:text-white rounded-lg text-xs whitespace-nowrap flex items-center gap-1">
+          <i class="fa-solid fa-plus text-[10px]"></i> Raum
+        </button>
+      `;
+      container.innerHTML = html;
+
+      // 2. Export Select
+      exportSelect.innerHTML = `<option value="all">Gesamtes Inventar (Alle Räume)</option>` + 
+        state.rooms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+
+      // 3. Item Room Select
+      itemRoomSelect.innerHTML = state.rooms.length === 0 
+        ? `<option value="">Keine Räume vorhanden</option>`
+        : state.rooms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+
+      // 4. Raum-Verwaltungsliste
+      if (state.rooms.length === 0) {
+        manageList.innerHTML = `<div class="text-center py-6 text-xs text-slate-500">Noch keine Räume angelegt.<br>Tippen Sie oben einen Namen ein und drücken Sie auf „Hinzufügen“.</div>`;
+      } else {
+        manageList.innerHTML = state.rooms.map(room => {
+          const count = state.items.filter(i => i.roomId === room.id).length;
+          return `
+            <div class="flex items-center justify-between p-2.5 bg-slate-800/80 border border-slate-700/60 rounded-xl gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-white truncate">${room.name}</div>
+                <div class="text-[11px] text-slate-400">${count} Geräte erfasst</div>
+              </div>
+              <div class="flex items-center gap-1">
+                <button onclick="window.editRoom('${room.id}')" title="Raum umbenennen" class="touch-btn w-8 h-8 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button onclick="window.confirmDeleteRoom('${room.id}')" title="Raum löschen" class="touch-btn w-8 h-8 rounded-lg bg-slate-700/60 hover:bg-rose-900/50 text-slate-400 hover:text-rose-400 flex items-center justify-center">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function renderItems() {
+      const container = document.getElementById('itemsContainer');
+      const search = state.search.toLowerCase().trim();
+
+      let filtered = state.items.filter(item => {
+        const matchesRoom = (state.activeRoom === 'all') || (item.roomId === state.activeRoom);
+        const matchesSearch = !search || 
+                              item.name.toLowerCase().includes(search) || 
+                              (item.location && item.location.toLowerCase().includes(search)) ||
+                              (item.notes && item.notes.toLowerCase().includes(search));
+        return matchesRoom && matchesSearch;
+      });
+
+      // Statistiken berechnen
+      document.getElementById('statItemCount').innerText = filtered.length;
+      document.getElementById('statCountTotal').innerText = filtered.reduce((acc, i) => acc + (Number(i.count) || 0), 0);
+      document.getElementById('statTargetTotal').innerText = filtered.reduce((acc, i) => acc + (Number(i.target) || 0), 0);
+
+      // Leerer Zustand: Noch keine Räume
+      if (state.rooms.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 px-4 bg-slate-900/40 border border-dashed border-slate-800 rounded-2xl space-y-3">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-2xl">
+              <i class="fa-solid fa-door-open"></i>
+            </div>
+            <div class="text-sm font-bold text-slate-200">Noch keine Sporthallen oder Räume angelegt</div>
+            <div class="text-xs text-slate-500 max-w-xs mx-auto">Legen Sie zuerst Ihre eigenen Räume an (z. B. Ballkammer, Halle 1, Geräteraum Nord), um darin Geräte zu erfassen.</div>
+            <div class="pt-1 flex justify-center">
+              <button onclick="window.openRoomModal()" class="touch-btn px-4 py-2.5 bg-blue-600 active:bg-blue-700 text-white font-semibold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Ersten Raum anlegen
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Leerer Zustand: Keine Geräte
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 px-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl space-y-2">
+            <div class="w-10 h-10 mx-auto rounded-xl bg-slate-800 flex items-center justify-center text-slate-500 text-xl">
+              <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+            <div class="text-sm font-medium text-slate-400">Keine Geräte in diesem Bereich</div>
+            <div class="text-xs text-slate-500">Tippen Sie oben neben den Blitz ein Gerät ein oder klicken Sie auf „+ Gerät“.</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const roomObj = state.rooms.find(r => r.id === item.roomId);
+        const roomName = roomObj ? roomObj.name : 'Unbekannter Raum';
+        const count = Number(item.count) || 0;
+        const target = Number(item.target) || 0;
+
+        let statusBadge = '';
+        if (target > 0) {
+          if (count >= target) {
+            statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/60 inline-flex items-center gap-1"><i class="fa-solid fa-check text-[9px]"></i> Soll erfüllt (${count}/${target})</span>`;
+          } else {
+            const diff = target - count;
+            statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800/60 inline-flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> Es fehlen ${diff} (${count}/${target})</span>`;
+          }
+        } else {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700/60">Gezählt: ${count}</span>`;
+        }
+
+        // Zustandsbadge
+        let conditionColor = 'text-emerald-400 border-emerald-900 bg-emerald-950/40';
+        if (item.condition === 'Leichte Mängel') conditionColor = 'text-amber-400 border-amber-900 bg-amber-950/40';
+        if (item.condition === 'Reparaturbedürftig' || item.condition === 'Ausscheiden') conditionColor = 'text-rose-400 border-rose-900 bg-rose-950/40';
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-3.5 shadow-sm space-y-3 transition-colors">
+            <div class="flex items-start justify-between gap-2">
+              <div class="space-y-1 flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-sm font-bold text-white truncate">${item.name}</span>
+                  <span class="text-[9px] px-1.5 py-0.2 rounded border ${conditionColor} font-medium">${item.condition || 'In Ordnung'}</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                  <span class="text-blue-400 font-medium inline-flex items-center gap-1"><i class="fa-solid fa-door-open text-[10px]"></i>${roomName}</span>
+                  ${item.location ? `<span>• <i class="fa-solid fa-box-archive mr-0.5 text-slate-500"></i>${item.location}</span>` : ''}
+                </div>
+              </div>
+              <div class="flex items-center gap-1">
+                <button onclick="window.openItemModal('${item.id}')" title="Bearbeiten" class="touch-btn w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 flex items-center justify-center">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button onclick="window.confirmDeleteItem('${item.id}')" title="Löschen" class="touch-btn w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-rose-400 flex items-center justify-center">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
+              <div class="space-y-0.5">
+                ${statusBadge}
+                ${item.notes ? `<div class="text-[10px] text-rose-400 truncate max-w-[180px] flex items-center gap-1"><i class="fa-solid fa-circle-exclamation text-[9px]"></i><span>${item.notes}</span></div>` : ''}
+              </div>
+
+              <!-- Zähltasten (-1, +1, +5) -->
+              <div class="flex items-center gap-1.5">
+                <button onclick="window.decrementItem('${item.id}')" title="-1 abziehen" class="touch-btn w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-300 font-bold text-sm flex items-center justify-center border border-slate-700">
+                  -1
+                </button>
+                <button onclick="window.incrementItem('${item.id}', 1)" title="+1 hinzufügen" class="touch-btn h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center shadow-md">
+                  +1
+                </button>
+                <button onclick="window.incrementItem('${item.id}', 5)" title="+5 Schnellzählung" class="touch-btn h-9 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-emerald-400 font-bold text-xs flex items-center justify-center border border-slate-700">
+                  +5
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ==================== AKTIONEN & FILTER ====================
+
+    window.selectRoom = function(id) {
+      playClick();
+      state.activeRoom = id;
+      renderRooms();
+      renderItems();
+    };
+
+    window.handleSearch = function(val) {
+      state.search = val;
+      renderItems();
+    };
+
+    window.quickAddItem = function(e) {
+      e.preventDefault();
+      if (state.rooms.length === 0) {
+        window.openRoomModal();
+        showToast('Bitte zuerst mindestens einen Raum anlegen.', 'info');
+        return;
+      }
+
+      const input = document.getElementById('quickNameInput');
+      const name = input.value.trim();
+      if (!name) return;
+
+      const targetRoom = (state.activeRoom !== 'all') ? state.activeRoom : state.rooms[0].id;
+
+      const newItem = {
+        id: 'item_' + Date.now(),
+        name: name,
+        roomId: targetRoom,
+        location: '',
+        target: 0,
+        count: 1, // Bei Schnelleingabe direkt 1 gezählt
+        condition: 'In Ordnung',
+        notes: ''
+      };
+
+      state.items.unshift(newItem);
+      input.value = '';
+      playClick();
+      saveState();
+      renderItems();
+      showToast(`„${name}“ angelegt und gezählt!`);
+    };
+
+    window.incrementItem = function(id, amount) {
+      const item = state.items.find(i => i.id === id);
+      if (item) {
+        item.count = Math.max(0, (Number(item.count) || 0) + amount);
+        playClick();
+        saveState();
+        renderItems();
+      }
+    };
+
+    window.decrementItem = function(id) {
+      const item = state.items.find(i => i.id === id);
+      if (item) {
+        item.count = Math.max(0, (Number(item.count) || 0) - 1);
+        playClick();
+        saveState();
+        renderItems();
+      }
+    };
+
+    window.confirmDeleteItem = async function(id) {
+      const item = state.items.find(i => i.id === id);
+      const name = item ? item.name : 'dieses Gerät';
+      const confirmed = await requestConfirmation({
+        title: 'Gerät löschen',
+        message: `Möchten Sie „${name}“ wirklich aus dem Inventar entfernen?`,
+        confirmBtnText: 'Löschen',
+        isDanger: true
+      });
+
+      if (confirmed) {
+        state.items = state.items.filter(i => i.id !== id);
+        playClick();
+        saveState();
+        renderItems();
+        renderRooms();
+        showToast(`„${name}“ wurde gelöscht.`);
+      }
+    };
+
+    window.confirmResetAllCounts = async function() {
+      const confirmed = await requestConfirmation({
+        title: 'Zählung zurücksetzen',
+        message: 'Möchten Sie alle Ist-Bestände auf 0 setzen? Die Raum- und Gerätedaten bleiben erhalten.',
+        confirmBtnText: 'Auf 0 setzen',
+        isDanger: true
+      });
+
+      if (confirmed) {
+        state.items.forEach(i => i.count = 0);
+        playClick();
+        saveState();
+        renderItems();
+        showToast('Alle Zählwerte auf 0 gesetzt.');
+      }
+    };
+
+    // ==================== MODAL STEUERUNG RÄUME ====================
+
+    window.openRoomModal = function() {
+      window.cancelEditRoom();
+      document.getElementById('roomModal').classList.remove('hidden');
+      setTimeout(() => {
+        document.getElementById('newRoomInput').focus();
+      }, 100);
+    };
+
+    window.closeRoomModal = function() {
+      document.getElementById('roomModal').classList.add('hidden');
+      window.cancelEditRoom();
+      renderRooms();
+      renderItems();
+    };
+
+    window.saveRoom = function(e) {
+      e.preventDefault();
+      const input = document.getElementById('newRoomInput');
+      const editId = document.getElementById('editRoomId').value;
+      const name = input.value.trim();
+      if (!name) return;
+
+      if (editId) {
+        const room = state.rooms.find(r => r.id === editId);
+        if (room) {
+          room.name = name;
+          showToast(`Raum in „${name}“ umbenannt.`);
+        }
+        window.cancelEditRoom();
+      } else {
+        const newRoom = { id: 'room_' + Date.now(), name: name };
+        state.rooms.push(newRoom);
+        state.activeRoom = newRoom.id;
+        input.value = '';
+        showToast(`Raum „${name}“ erstellt.`);
+      }
+
+      playClick();
+      saveState();
+      renderRooms();
+      renderItems();
+    };
+
+    window.editRoom = function(roomId) {
+      const room = state.rooms.find(r => r.id === roomId);
+      if (!room) return;
+
+      document.getElementById('editRoomId').value = room.id;
+      const input = document.getElementById('newRoomInput');
+      input.value = room.name;
+      input.focus();
+
+      document.getElementById('saveRoomText').innerText = 'Speichern';
+      document.getElementById('saveRoomIcon').className = 'fa-solid fa-check text-xs';
+      document.getElementById('cancelEditRoomRow').classList.remove('hidden');
+    };
+
+    window.cancelEditRoom = function() {
+      document.getElementById('editRoomId').value = '';
+      const input = document.getElementById('newRoomInput');
+      if (input) input.value = '';
+      
+      const saveText = document.getElementById('saveRoomText');
+      if (saveText) saveText.innerText = 'Hinzufügen';
+      const saveIcon = document.getElementById('saveRoomIcon');
+      if (saveIcon) saveIcon.className = 'fa-solid fa-plus text-xs';
+      const cancelRow = document.getElementById('cancelEditRoomRow');
+      if (cancelRow) cancelRow.classList.add('hidden');
+    };
+
+    window.confirmDeleteRoom = async function(roomId) {
+      const room = state.rooms.find(r => r.id === roomId);
+      const count = state.items.filter(i => i.roomId === roomId).length;
+      const roomName = room ? room.name : 'Raum';
+
+      const confirmed = await requestConfirmation({
+        title: `Raum „${roomName}“ löschen`,
+        message: count > 0 
+          ? `Achtung: Dabei werden auch alle ${count} darin gespeicherten Geräte gelöscht. Möchten Sie diesen Raum wirklich entfernen?`
+          : `Möchten Sie den Raum „${roomName}“ wirklich löschen?`,
+        confirmBtnText: 'Raum löschen',
+        isDanger: true
+      });
+
+      if (confirmed) {
+        state.rooms = state.rooms.filter(r => r.id !== roomId);
+        state.items = state.items.filter(i => i.roomId !== roomId);
+        if (state.activeRoom === roomId) state.activeRoom = 'all';
+        window.cancelEditRoom();
+        playClick();
+        saveState();
+        renderRooms();
+        renderItems();
+        showToast(`Raum „${roomName}“ wurde gelöscht.`);
+      }
+    };
+
+    // ==================== MODAL STEUERUNG GERÄTE ====================
+
+    window.openItemModal = function(editId = null) {
+      if (state.rooms.length === 0) {
+        window.openRoomModal();
+        showToast('Bitte legen Sie zuerst einen Raum an.', 'info');
+        return;
+      }
+
+      document.getElementById('editItemId').value = editId || '';
+      document.getElementById('itemModalTitle').innerHTML = editId 
+        ? `<i class="fa-solid fa-pen-to-square text-emerald-400"></i><span>Gerät bearbeiten</span>` 
+        : `<i class="fa-solid fa-plus text-emerald-400"></i><span>Gerät erfassen</span>`;
+
+      if (editId) {
+        const item = state.items.find(i => i.id === editId);
+        if (item) {
+          document.getElementById('itemName').value = item.name;
+          document.getElementById('itemRoom').value = item.roomId;
+          document.getElementById('itemLocation').value = item.location || '';
+          document.getElementById('itemTarget').value = item.target || 0;
+          document.getElementById('itemCount').value = item.count || 0;
+          document.getElementById('itemCondition').value = item.condition || 'In Ordnung';
+          document.getElementById('itemNotes').value = item.notes || '';
+        }
+      } else {
+        document.getElementById('itemName').value = '';
+        document.getElementById('itemRoom').value = (state.activeRoom !== 'all') ? state.activeRoom : state.rooms[0].id;
+        document.getElementById('itemLocation').value = '';
+        document.getElementById('itemTarget').value = 0;
+        document.getElementById('itemCount').value = 0;
+        document.getElementById('itemCondition').value = 'In Ordnung';
+        document.getElementById('itemNotes').value = '';
+      }
+
+      document.getElementById('itemModal').classList.remove('hidden');
+    };
+
+    window.closeItemModal = function() {
+      document.getElementById('itemModal').classList.add('hidden');
+    };
+
+    window.saveItem = function(e) {
+      e.preventDefault();
+      const editId = document.getElementById('editItemId').value;
+      const name = document.getElementById('itemName').value.trim();
+      const roomId = document.getElementById('itemRoom').value;
+      const location = document.getElementById('itemLocation').value.trim();
+      const target = Number(document.getElementById('itemTarget').value) || 0;
+      const count = Number(document.getElementById('itemCount').value) || 0;
+      const condition = document.getElementById('itemCondition').value;
+      const notes = document.getElementById('itemNotes').value.trim();
+
+      if (!name || !roomId) return;
+
+      if (editId) {
+        const item = state.items.find(i => i.id === editId);
+        if (item) {
+          item.name = name;
+          item.roomId = roomId;
+          item.location = location;
+          item.target = target;
+          item.count = count;
+          item.condition = condition;
+          item.notes = notes;
+        }
+        showToast('Gerät aktualisiert.');
+      } else {
+        state.items.unshift({
+          id: 'item_' + Date.now(),
+          name, roomId, location, target, count, condition, notes
+        });
+        showToast('Neues Gerät erfasst.');
+      }
+
+      playClick();
+      saveState();
+      window.closeItemModal();
+      renderRooms();
+      renderItems();
+    };
+
+    // ==================== EXPORT & BACKUP ====================
+
+    window.openExportModal = function() {
+      document.getElementById('exportModal').classList.remove('hidden');
+    };
+
+    window.closeExportModal = function() {
+      document.getElementById('exportModal').classList.add('hidden');
+    };
+
+    window.exportCSV = function() {
+      const targetRoom = document.getElementById('exportRoomSelect').value;
+      let exportItems = state.items;
+      let filename = 'SportKustod_Gesamtinventar.csv';
+
+      if (targetRoom !== 'all') {
+        const roomObj = state.rooms.find(r => r.id === targetRoom);
+        const rName = roomObj ? roomObj.name.replace(/\s+/g, '_') : 'Raum';
+        exportItems = state.items.filter(i => i.roomId === targetRoom);
+        filename = `SportKustod_${rName}.csv`;
+      }
+
+      // CSV Header mit UTF-8 BOM für Excel-Kompatibilität
+      const headers = ['Raum;Gerätebezeichnung;Lagerplatz;Soll;Ist;Differenz;Zustand;Notizen'];
+      const rows = exportItems.map(item => {
+        const room = state.rooms.find(r => r.id === item.roomId);
+        const roomName = room ? room.name : '';
+        const diff = (Number(item.count) || 0) - (Number(item.target) || 0);
+        return [
+          `"${roomName.replace(/"/g, '""')}"`,
+          `"${item.name.replace(/"/g, '""')}"`,
+          `"${(item.location || '').replace(/"/g, '""')}"`,
+          item.target || 0,
+          item.count || 0,
+          diff,
+          `"${item.condition}"`,
+          `"${(item.notes || '').replace(/"/g, '""')}"`
+        ].join(';');
+      });
+
+      const csvContent = '\uFEFF' + [headers, ...rows].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      window.closeExportModal();
+      showToast('CSV-Export heruntergeladen.');
+    };
+
+    window.downloadBackup = function() {
+      const json = JSON.stringify({ rooms: state.rooms, items: state.items }, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `SportKustod_Sicherung_${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      showToast('Sicherungsdatei heruntergeladen.');
+    };
+
+    window.restoreBackup = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = JSON.parse(evt.target.result);
+          if (Array.isArray(data.rooms) && Array.isArray(data.items)) {
+            state.rooms = data.rooms;
+            state.items = data.items;
+            state.activeRoom = 'all';
+            saveState();
+            renderRooms();
+            renderItems();
+            window.closeExportModal();
+            showToast('Sicherung erfolgreich wiederhergestellt!');
+          } else {
+            showToast('Ungültiges Sicherungsformat.', 'error');
+          }
+        } catch (err) {
+          showToast('Fehler beim Einlesen der Datei.', 'error');
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    // Initialisierung beim Start
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      renderRooms();
+      renderItems();
+    });
+  </script>
+</body>
+</html>
